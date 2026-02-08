@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的桌遊收藏庫</title>
+    <title>桌遊收藏庫</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
@@ -19,24 +19,66 @@
             background-color: var(--bg-color);
             color: #333;
         }
+        
+        /* --- 篩選區塊樣式 (大改版) --- */
         .filter-container {
             background: white;
-            padding: 20px;
+            padding: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             margin-bottom: 20px;
             position: sticky;
             top: 0;
             z-index: 100;
         }
+
+        /* 上方搜尋列與按鈕的容器 */
+        .filter-header {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
         .search-box {
-            width: 100%;
+            flex-grow: 1; /* 佔滿剩餘空間 */
             padding: 10px;
             font-size: 16px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            margin-bottom: 15px;
+            /* 移除原本的 margin-bottom，改由 header 控制 */
+            margin: 0; 
             box-sizing: border-box;
         }
+
+        /* 篩選切換按鈕 */
+        .toggle-btn {
+            padding: 10px 15px;
+            background-color: #f1f3f4;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap; /* 不換行 */
+            font-weight: bold;
+            color: #555;
+            transition: 0.2s;
+        }
+        .toggle-btn:hover {
+            background-color: #e8eaed;
+        }
+        .toggle-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* 可收合的篩選選項區 */
+        .filter-body {
+            margin-top: 15px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
         .filter-row {
             display: flex;
             align-items: flex-start;
@@ -45,18 +87,21 @@
             padding-bottom: 10px;
             flex-wrap: wrap;
         }
+        
         .filter-label {
             width: 80px;
             font-weight: bold;
             flex-shrink: 0;
             padding-top: 5px;
         }
+        
         .filter-options {
             flex-grow: 1;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px; /*稍微縮小間距讓手機好排*/
         }
+        
         .checkbox-label {
             display: flex;
             align-items: center;
@@ -80,15 +125,18 @@
             border-color: #1a73e8;
             color: #1a73e8;
         }
+
+        /* --- 桌遊列表樣式 (Grid 調整) --- */
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            padding: 20px;
+            /* 🔥 電腦版：改為 minmax 170px，在 1200px 寬度下大約能塞 6 個 */
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            gap: 15px; /*稍微縮小間距*/
+            padding: 15px;
             max-width: 1200px;
             margin: 0 auto;
         }
-        /* 卡片樣式 (支援連結) */
+
         .game-card {
             display: block; 
             text-decoration: none; 
@@ -124,11 +172,11 @@
         }
         .badge-recommend {
             position: absolute;
-            top: 10px;
+            top: 5px;
             left: -5px;
             background-color: var(--accent-color);
             color: white;
-            padding: 5px 10px;
+            padding: 3px 8px;
             font-size: 12px;
             font-weight: bold;
             border-radius: 0 4px 4px 0;
@@ -136,36 +184,37 @@
             z-index: 10;
         }
         .card-content {
-            padding: 15px;
+            padding: 10px; /*稍微縮小內距*/
         }
         .game-title {
-            font-size: 18px;
+            font-size: 16px; /*稍微縮小字體*/
             font-weight: bold;
-            margin: 0 0 10px 0;
+            margin: 0 0 8px 0;
             color: #222;
+            line-height: 1.3;
         }
         .game-info {
-            font-size: 13px;
+            font-size: 12px;
             color: #666;
             margin-bottom: 5px;
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
+            gap: 4px;
             align-items: center;
         }
         .tag {
             background: #eee;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 11px;
         }
         .game-desc {
-            margin-top: 10px;
-            font-size: 14px;
+            margin-top: 8px;
+            font-size: 13px;
             color: #555;
             line-height: 1.4;
             border-top: 1px solid #eee;
-            padding-top: 8px;
+            padding-top: 6px;
             white-space: pre-wrap;
         }
         .loading {
@@ -174,10 +223,25 @@
             font-size: 20px;
             color: #888;
         }
+
+        /* --- RWD 手機版調整 --- */
         @media (max-width: 600px) {
-            .game-grid { grid-template-columns: 1fr; }
-            .filter-label { width: 100%; margin-bottom: 5px; }
-            .filter-row { flex-direction: column; }
+            .game-grid {
+                /* 🔥 手機版：強制一排 2 個 (1fr 1fr) */
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                padding: 10px;
+            }
+            .filter-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            .filter-row {
+                flex-direction: column;
+            }
+            /* 手機版字體稍微調小以適應兩欄 */
+            .game-title { font-size: 15px; }
+            .game-desc { display: none; } /* 手機版如果覺得太擠，可以選擇隱藏備註，若要顯示請刪除此行 */
         }
     </style>
 </head>
@@ -185,37 +249,44 @@
 
 <div id="app">
     <div class="filter-container">
-        <input type="text" v-model="searchKeyword" class="search-box" placeholder="輸入關鍵字搜尋桌遊名稱或備註...">
-        
-        <div class="filter-row">
-            <div class="filter-label">遊戲分類</div>
-            <div class="filter-options">
-                <label v-for="cat in allCategories" :key="cat" class="checkbox-label" :class="{ active: selectedCategories.includes(cat) }">
-                    <input type="checkbox" :value="cat" v-model="selectedCategories"> {{ cat }}
-                </label>
-            </div>
-        </div>
-
-        <div class="filter-row">
-            <div class="filter-label">建議人數</div>
-            <div class="filter-options">
-                <label v-for="num in playerOptions" :key="num" class="checkbox-label" :class="{ active: selectedPlayers.includes(num) }">
-                    <input type="checkbox" :value="num" v-model="selectedPlayers"> {{ num }}人
-                </label>
-            </div>
-        </div>
-
-        <div class="filter-row">
-            <div class="filter-label">遊玩時間</div>
-            <div class="filter-options">
-                <label v-for="time in timeOptions" :key="time" class="checkbox-label" :class="{ active: selectedTimes.includes(time) }">
-                    <input type="checkbox" :value="time" v-model="selectedTimes"> {{ time }}
-                </label>
-            </div>
+        <div class="filter-header">
+            <input type="text" v-model="searchKeyword" class="search-box" placeholder="搜尋桌遊...">
+            <button class="toggle-btn" :class="{ active: isFilterExpanded }" @click="toggleFilter">
+                {{ isFilterExpanded ? '收合 ▲' : '篩選條件 ▼' }}
+            </button>
         </div>
         
-        <div style="font-size: 12px; color: #888; text-align: right;">
-            顯示 {{ filteredGames.length }} 款桌遊
+        <div class="filter-body" v-show="isFilterExpanded">
+            <div class="filter-row">
+                <div class="filter-label">遊戲分類</div>
+                <div class="filter-options">
+                    <label v-for="cat in allCategories" :key="cat" class="checkbox-label" :class="{ active: selectedCategories.includes(cat) }">
+                        <input type="checkbox" :value="cat" v-model="selectedCategories"> {{ cat }}
+                    </label>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-label">建議人數</div>
+                <div class="filter-options">
+                    <label v-for="num in playerOptions" :key="num" class="checkbox-label" :class="{ active: selectedPlayers.includes(num) }">
+                        <input type="checkbox" :value="num" v-model="selectedPlayers"> {{ num }}人
+                    </label>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filter-label">遊玩時間</div>
+                <div class="filter-options">
+                    <label v-for="time in timeOptions" :key="time" class="checkbox-label" :class="{ active: selectedTimes.includes(time) }">
+                        <input type="checkbox" :value="time" v-model="selectedTimes"> {{ time }}
+                    </label>
+                </div>
+            </div>
+            
+            <div style="font-size: 12px; color: #888; text-align: right; margin-top: 10px;">
+                顯示 {{ filteredGames.length }} 款桌遊
+            </div>
         </div>
     </div>
 
@@ -251,7 +322,7 @@
 </div>
 
 <script>
-    // ▼▼▼ 你的 Google Sheet 網址已自動填入 ▼▼▼
+    // ▼▼▼ 你的 Google Sheet 網址 ▼▼▼
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjfiKKhRKlV0dB-C2YVI7_hyt_BmQ6BvC4dh_hEqGbbctMVPn7uUaeaJU92QUftxY8dnK5mwqhUri_/pub?output=csv'; 
     // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
@@ -265,6 +336,9 @@
             const selectedCategories = ref([]);
             const selectedPlayers = ref([]);
             const selectedTimes = ref([]);
+            
+            // 🔥 新增：控制篩選區展開/收合的變數
+            const isFilterExpanded = ref(false); 
 
             const playerOptions = ["2", "3", "4", "5", "6", "7", "8", "9", "10+"];
             const timeOptions = ["15min", "30min", "45min", "60min", "1hr+"];
@@ -275,6 +349,11 @@
                 "45min": [31, 45],
                 "60min": [46, 60],
                 "1hr+":  [61, 9999]
+            };
+
+            // 🔥 新增：切換篩選區顯示的函式
+            const toggleFilter = () => {
+                isFilterExpanded.value = !isFilterExpanded.value;
             };
 
             onMounted(() => {
@@ -390,7 +469,9 @@
                 selectedCategories,
                 selectedPlayers,
                 selectedTimes,
-                filteredGames
+                filteredGames,
+                isFilterExpanded, // 匯出變數供 HTML 使用
+                toggleFilter      // 匯出函式供 HTML 使用
             };
         }
     }).mount('#app');
