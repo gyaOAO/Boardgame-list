@@ -23,7 +23,7 @@
         /* --- 篩選區塊樣式 --- */
         .filter-container {
             background: white;
-            padding: 15px 20px; /* 稍微增加左右內距 */
+            padding: 15px 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             margin-bottom: 20px;
             position: sticky;
@@ -40,20 +40,19 @@
 
         .search-box {
             flex-grow: 1; 
-            padding: 10px;
+            padding: 12px; /* 加大輸入框內距 */
             font-size: 16px;
             border: 1px solid #ddd;
             border-radius: 4px;
             margin: 0; 
             box-sizing: border-box;
-            min-width: 0; /* 防止在小螢幕被撐開 */
+            min-width: 0;
         }
 
-        /* 🔥 新增：常駐顯示的數量標籤 */
         .count-badge {
             font-size: 14px;
             color: #666;
-            white-space: nowrap; /* 不換行 */
+            white-space: nowrap;
             background: #f8f9fa;
             padding: 8px 12px;
             border-radius: 20px;
@@ -101,6 +100,7 @@
             font-weight: bold;
             flex-shrink: 0;
             padding-top: 5px;
+            font-size: 15px; /* 稍微加大 */
         }
         
         .filter-options {
@@ -114,9 +114,9 @@
             display: flex;
             align-items: center;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px; /* 選項字體加大 */
             background: #fff;
-            padding: 4px 8px;
+            padding: 6px 10px; /* 選項按鈕加大 */
             border: 1px solid #ddd;
             border-radius: 4px;
             transition: 0.2s;
@@ -137,10 +137,10 @@
         /* --- 桌遊列表樣式 --- */
         .game-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-            gap: 15px;
-            padding: 0 20px 20px 20px; /* 上方 padding 歸零，左右增加 */
-            /* 🔥 修改重點：寬度改為 95%，讓兩側留白變少 */
+            /* 🔥 修改重點：將 170px 改為 280px，強制讓卡片變大，一排變少 */
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px; /* 間距稍微加大 */
+            padding: 0 20px 20px 20px;
             max-width: 95%; 
             margin: 0 auto;
         }
@@ -187,52 +187,54 @@
     object-fit: contain; 
     padding: 10px; /* 稍微留點邊距，不要讓盒子頂到邊框 */
 }
-        
         .badge-recommend {
             position: absolute;
-            top: 5px;
+            top: 10px;
             left: -5px;
             background-color: var(--accent-color);
             color: white;
-            padding: 3px 8px;
-            font-size: 12px;
+            padding: 4px 10px;
+            font-size: 13px; /* 標籤字加大 */
             font-weight: bold;
             border-radius: 0 4px 4px 0;
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
             z-index: 10;
         }
         .card-content {
-            padding: 12px; /* 稍微增加一點內距讓文字呼吸 */
+            padding: 15px; /* 內容內距加大 */
         }
+        /* 🔥 修改重點：標題字體加大 */
         .game-title {
-            font-size: 16px;
+            font-size: 20px; 
             font-weight: bold;
-            margin: 0 0 8px 0;
+            margin: 0 0 10px 0;
             color: #222;
             line-height: 1.3;
         }
+        /* 🔥 修改重點：資訊字體加大 */
         .game-info {
-            font-size: 12px;
+            font-size: 14px;
             color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 6px;
             align-items: center;
         }
         .tag {
             background: #eee;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-size: 11px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 13px; /* 標籤字加大 */
         }
+        /* 🔥 修改重點：備註字體加大 */
         .game-desc {
-            margin-top: 8px;
-            font-size: 13px;
+            margin-top: 10px;
+            font-size: 15px;
             color: #555;
-            line-height: 1.4;
+            line-height: 1.5;
             border-top: 1px solid #eee;
-            padding-top: 6px;
+            padding-top: 8px;
             white-space: pre-wrap;
         }
         .loading {
@@ -242,19 +244,20 @@
             color: #888;
         }
 
-        /* --- RWD 手機版調整 --- */
+        /* --- RWD 手機版調整 (維持原樣) --- */
         @media (max-width: 600px) {
             .game-grid {
+                /* 手機版強制維持一排 2 個，不受上面 280px 影響 */
                 grid-template-columns: repeat(2, 1fr);
                 gap: 10px;
                 padding: 10px;
-                max-width: 100%; /* 手機版全寬 */
+                max-width: 100%;
             }
             .filter-container {
-                padding: 10px; /* 手機版篩選區緊湊一點 */
+                padding: 10px;
             }
             .filter-header {
-                gap: 8px; /* 手機版間距縮小 */
+                gap: 8px;
             }
             .count-badge {
                 padding: 5px 8px;
@@ -267,11 +270,20 @@
             .filter-label {
                 width: 100%;
                 margin-bottom: 5px;
+                font-size: 14px; /* 手機版還原小字體 */
+            }
+            .checkbox-label {
+                font-size: 13px; /* 手機版還原小字體 */
+                padding: 4px 8px;
             }
             .filter-row {
                 flex-direction: column;
             }
-            .game-title { font-size: 15px; }
+            /* 手機版還原較適合的字體大小 */
+            .game-title { font-size: 15px; margin-bottom: 5px; }
+            .game-info { font-size: 12px; gap: 4px; }
+            .tag { font-size: 11px; padding: 2px 4px; }
+            .card-content { padding: 10px; }
             .game-desc { display: none; } 
         }
     </style>
@@ -282,11 +294,9 @@
     <div class="filter-container">
         <div class="filter-header">
             <input type="text" v-model="searchKeyword" class="search-box" placeholder="搜尋桌遊...">
-            
             <div class="count-badge">
                 共 {{ filteredGames.length }} 款
             </div>
-
             <button class="toggle-btn" :class="{ active: isFilterExpanded }" @click="toggleFilter">
                 {{ isFilterExpanded ? '收合 ▲' : '篩選 ▼' }}
             </button>
@@ -508,4 +518,3 @@
 </script>
 </body>
 </html>
-
