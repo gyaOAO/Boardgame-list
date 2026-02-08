@@ -88,7 +88,11 @@
             max-width: 1200px;
             margin: 0 auto;
         }
+        /* 卡片樣式 (支援連結) */
         .game-card {
+            display: block; 
+            text-decoration: none; 
+            color: inherit; 
             background: white;
             border-radius: 8px;
             overflow: hidden;
@@ -96,11 +100,16 @@
             transition: transform 0.2s;
             position: relative;
             border: 1px solid #eee;
+            cursor: default;
         }
-        .game-card:hover {
+        .game-card.has-link {
+            cursor: pointer;
+        }
+        .game-card.has-link:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.15);
         }
+
         .image-container {
             width: 100%;
             aspect-ratio: 4 / 3;
@@ -213,7 +222,13 @@
     <div v-if="loading" class="loading">正在讀取桌遊資料庫...</div>
     
     <div v-else class="game-grid">
-        <div v-for="game in filteredGames" :key="game.id" class="game-card">
+        <a v-for="game in filteredGames" 
+           :key="game.id" 
+           class="game-card" 
+           :class="{ 'has-link': game.url }"
+           :href="game.url ? game.url : null" 
+           :target="game.url ? '_blank' : null">
+           
             <div v-if="game.isRecommended" class="badge-recommend">推薦</div>
             <div class="image-container">
                 <img :src="game.image" :alt="game.title" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
@@ -231,12 +246,12 @@
                     {{ game.desc }}
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
 <script>
-    // ▼▼▼ 請將此處的網址換成你的 Google Sheet 發布 CSV 網址 ▼▼▼
+    // ▼▼▼ 你的 Google Sheet 網址已自動填入 ▼▼▼
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjfiKKhRKlV0dB-C2YVI7_hyt_BmQ6BvC4dh_hEqGbbctMVPn7uUaeaJU92QUftxY8dnK5mwqhUri_/pub?output=csv'; 
     // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
@@ -254,7 +269,6 @@
             const playerOptions = ["2", "3", "4", "5", "6", "7", "8", "9", "10+"];
             const timeOptions = ["15min", "30min", "45min", "60min", "1hr+"];
 
-            // 定義各個時間按鈕的「分鐘數範圍」
             const timeButtonRanges = {
                 "15min": [0, 15],
                 "30min": [16, 30],
@@ -274,7 +288,6 @@
                             .map((row, index) => {
                                 const cats = row.Category ? row.Category.split(/[,，、]/).map(c => c.trim()) : [];
                                 
-                                // 人數範圍處理
                                 let minP = 1, maxP = 99;
                                 if(row.Players) {
                                     const parts = row.Players.match(/(\d+)/g);
@@ -284,25 +297,15 @@
                                     }
                                 }
 
-                                // 🔥🔥🔥 時間範圍處理 (新功能) 🔥🔥🔥
-                                let myTimeBuckets = []; // 這款桌遊屬於哪些時間分類
+                                let myTimeBuckets = [];
                                 let tMin = 0, tMax = 0;
                                 const timeParts = row.Time ? row.Time.match(/(\d+)/g) : [];
                                 
                                 if (timeParts.length > 0) {
                                     tMin = parseInt(timeParts[0]);
-                                    // 如果只有寫一個數字 "30"，則 min=30, max=30
-                                    // 如果寫 "45-75"，則 min=45, max=75
                                     tMax = timeParts.length > 1 ? parseInt(timeParts[1]) : tMin;
-
-                                    // 檢查這款遊戲的時間範圍是否與按鈕的範圍有重疊
-                                    // 重疊公式：max(A_start, B_start) <= min(A_end, B_end)
                                     for (const [btnName, range] of Object.entries(timeButtonRanges)) {
-                                        const btnMin = range[0];
-                                        const btnMax = range[1];
-                                        
-                                        // 判斷重疊
-                                        if (Math.max(tMin, btnMin) <= Math.min(tMax, btnMax)) {
+                                        if (Math.max(tMin, range[0]) <= Math.min(tMax, range[1])) {
                                             myTimeBuckets.push(btnName);
                                         }
                                     }
@@ -315,12 +318,13 @@
                                     sequence: sequenceNum,
                                     title: row.Title,
                                     image: row.Image,
+                                    url: row.Url ? row.Url.trim() : null, 
                                     categories: cats,
                                     playerText: row.Players,
                                     playerMin: minP,
                                     playerMax: maxP,
                                     timeText: row.Time,
-                                    timeBuckets: myTimeBuckets, // 這裡存的是一個陣列，例如 ["45min", "60min", "1hr+"]
+                                    timeBuckets: myTimeBuckets,
                                     desc: row.Desc,
                                     isRecommended: (row.Recommend && (row.Recommend === 'TRUE' || row.Recommend.includes('是')))
                                 };
@@ -363,7 +367,6 @@
                     });
                 }
 
-                // 🔥 修正後的篩選邏輯：檢查遊戲的 timeBuckets 是否包含使用者選的任意一個
                 if (selectedTimes.value.length > 0) {
                     result = result.filter(g => 
                         g.timeBuckets.some(tb => selectedTimes.value.includes(tb))
@@ -394,4 +397,3 @@
 </script>
 </body>
 </html>
-
