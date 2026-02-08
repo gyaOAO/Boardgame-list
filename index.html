@@ -445,7 +445,7 @@
                                     timeText: row.Time,
                                     timeBuckets: myTimeBuckets,
                                     desc: row.Desc,
-                                    isRecommended: (row.Recommend && (row.Recommend === 'TRUE' || row.Recommend.includes('是')))
+                                    isRecommended: (row.Recommend && (row.Recommend === 'Y' || row.Recommend.includes('是')))
                                 };
                             });
                         loading.value = false;
@@ -518,5 +518,6 @@
 </script>
 </body>
 </html>
+
 
 
