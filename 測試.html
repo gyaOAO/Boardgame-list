@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的桌遊收藏庫</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #5d5d5d;
+            --accent-color: #d93025; /* 推薦標籤紅 */
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: #333;
+        }
+
+        /* --- 篩選區塊樣式 --- */
+        .filter-container {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-label {
+            width: 80px;
+            font-weight: bold;
+            flex-shrink: 0;
+            padding-top: 5px;
+        }
+
+        .filter-options {
+            flex-grow: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            background: #fff;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            transition: 0.2s;
+            user-select: none;
+        }
+
+        .checkbox-label:hover {
+            background-color: #f0f0f0;
+        }
+
+        .checkbox-label input {
+            margin-right: 6px;
+        }
+
+        /* 選中時的樣式 */
+        .checkbox-label.active {
+            background-color: #e8f0fe;
+            border-color: #1a73e8;
+            color: #1a73e8;
+        }
+
+        /* --- 桌遊列表樣式 --- */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            position: relative;
+            border: 1px solid #eee;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        /* 圖片 4:3 比例限制 */
+        .image-container {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background-color: #eee;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 超出部分裁切，保持填滿 */
+        }
+
+        /* 推薦標籤 (紅底白字) */
+        .badge-recommend {
+            position: absolute;
+            top: 10px;
+            left: -5px; /* 稍微突出 */
+            background-color: var(--accent-color);
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 0 4px 4px 0;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .card-content {
+            padding: 15px;
+        }
+
+        .game-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            color: #222;
+        }
+
+        .game-info {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .tag {
+            background: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .game-desc {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.4;
+            border-top: 1px solid #eee;
+            padding-top: 8px;
+            white-space: pre-wrap; /* 保留換行 */
+        }
+
+        /* 載入中 */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 20px;
+            color: #888;
+        }
+
+        /* RWD 調整 */
+        @media (max-width: 600px) {
+            .game-grid {
+                grid-template-columns: 1fr; /* 手機版單欄 */
+            }
+            .filter-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            .filter-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="filter-container">
+        <input type="text" v-model="searchKeyword" class="search-box" placeholder="輸入關鍵字搜尋桌遊名稱或備註...">
+        
+        <div class="filter-row">
+            <div class="filter-label">遊戲分類</div>
+            <div class="filter-options">
+                <label v-for="cat in allCategories" :key="cat" class="checkbox-label" :class="{ active: selectedCategories.includes(cat) }">
+                    <input type="checkbox" :value="cat" v-model="selectedCategories"> {{ cat }}
+                </label>
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-label">建議人數</div>
+            <div class="filter-options">
+                <label v-for="num in playerOptions" :key="num" class="checkbox-label" :class="{ active: selectedPlayers.includes(num) }">
+                    <input type="checkbox" :value="num" v-model="selectedPlayers"> {{ num }}人
+                </label>
+            </div>
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-label">遊玩時間</div>
+            <div class="filter-options">
+                <label v-for="time in timeOptions" :key="time" class="checkbox-label" :class="{ active: selectedTimes.includes(time) }">
+                    <input type="checkbox" :value="time" v-model="selectedTimes"> {{ time }}
+                </label>
+            </div>
+        </div>
+        
+        <div style="font-size: 12px; color: #888; text-align: right;">
+            顯示 {{ filteredGames.length }} 款桌遊
+        </div>
+    </div>
+
+    <div v-if="loading" class="loading">正在讀取桌遊資料庫...</div>
+    
+    <div v-else class="game-grid">
+        <div v-for="game in filteredGames" :key="game.id" class="game-card">
+            
+            <div v-if="game.isRecommended" class="badge-recommend">推薦</div>
+
+            <div class="image-container">
+                <img :src="game.image" :alt="game.title" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
+            </div>
+
+            <div class="card-content">
+                <h3 class="game-title">{{ game.title }}</h3>
+                
+                <div class="game-info">
+                    <span v-for="c in game.categories" class="tag">#{{ c }}</span>
+                </div>
+                
+                <div class="game-info" style="margin-top:8px;">
+                    <span>👥 {{ game.playerText }}</span>
+                    <span style="margin-left: 10px;">⏰ {{ game.timeText }}</span>
+                </div>
+
+                <div class="game-desc" v-if="game.desc">
+                    {{ game.desc }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ▼▼▼ 請將此處的網址換成你的 Google Sheet 發布 CSV 網址 ▼▼▼
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjfiKKhRKlV0dB-C2YVI7_hyt_BmQ6BvC4dh_hEqGbbctMVPn7uUaeaJU92QUftxY8dnK5mwqhUri_/pub?output=csv'; 
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+    const { createApp, computed, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const games = ref([]);
+            const loading = ref(true);
+            const searchKeyword = ref("");
+            
+            // 篩選狀態
+            const selectedCategories = ref([]);
+            const selectedPlayers = ref([]);
+            const selectedTimes = ref([]);
+
+            // 固定選項 (依照你的需求設定)
+            const playerOptions = ["2", "3", "4", "5", "6", "7", "8", "9", "10+"];
+            const timeOptions = ["15min", "30min", "45min", "60min", "1hr+"];
+
+            // 1. 抓取資料
+            onMounted(() => {
+                Papa.parse(SHEET_CSV_URL, {
+                    download: true,
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: (results) => {
+                        // 整理資料格式
+                        games.value = results.data
+                            .filter(row => row.Title) // 過濾標題為空的行
+                            .map((row, index) => {
+                                // A. 處理分類 (支援逗號與頓號)
+                                const cats = row.Category ? row.Category.split(/[,，、]/).map(c => c.trim()) : [];
+                                
+                                // B. 處理人數 (解析 "2-4" -> min:2, max:4)
+                                let minP = 1, maxP = 99;
+                                if(row.Players) {
+                                    const parts = row.Players.match(/(\d+)/g);
+                                    if(parts) {
+                                        minP = parseInt(parts[0]);
+                                        // 如果只有一個數字(如"4人")，則 min=4, max=4
+                                        // 如果是範圍(如"2-4")，則 min=2, max=4
+                                        maxP = parts.length > 1 ? parseInt(parts[1]) : minP;
+                                    }
+                                }
+
+                                // C. 處理時間 (自動歸類邏輯)
+                                let timeBucket = ""; 
+                                const timeNumMatch = row.Time ? row.Time.match(/(\d+)/) : null;
+                                if (timeNumMatch) {
+                                    const minutes = parseInt(timeNumMatch[0]);
+                                    if (minutes <= 15) timeBucket = "15min";
+                                    else if (minutes <= 30) timeBucket = "30min";
+                                    else if (minutes <= 45) timeBucket = "45min";
+                                    else if (minutes <= 60) timeBucket = "60min";
+                                    else timeBucket = "1hr+";
+                                }
+
+                                return {
+                                    id: index,
+                                    // 處理時間戳記 (若無則預設為舊時間 1970年)
+                                    timestamp: row.Timestamp ? new Date(row.Timestamp) : new Date(0), 
+                                    title: row.Title,
+                                    image: row.Image,
+                                    categories: cats,
+                                    playerText: row.Players, // 顯示用原文
+                                    playerMin: minP,         // 運算用最小值
+                                    playerMax: maxP,         // 運算用最大值
+                                    timeText: row.Time,      // 顯示用原文 (如 "20min")
+                                    timeBucket: timeBucket,  // 篩選用標籤 (如 "30min")
+                                    desc: row.Desc,
+                                    isRecommended: (row.Recommend && (row.Recommend === 'TRUE' || row.Recommend.includes('是')))
+                                };
+                            });
+                        loading.value = false;
+                    }
+                });
+            });
+
+            // 2. 計算所有動態分類 (只顯示目前資料庫有的)
+            const allCategories = computed(() => {
+                const s = new Set();
+                games.value.forEach(g => g.categories.forEach(c => s.add(c)));
+                return Array.from(s).sort();
+            });
+
+            // 3. 核心篩選邏輯
+            const filteredGames = computed(() => {
+                let result = games.value;
+
+                // A. 關鍵字搜尋
+                if (searchKeyword.value) {
+                    const k = searchKeyword.value.toLowerCase();
+                    result = result.filter(g => 
+                        g.title.toLowerCase().includes(k) || 
+                        (g.desc && g.desc.toLowerCase().includes(k))
+                    );
+                }
+
+                // B. 遊戲分類 (聯集 OR)
+                if (selectedCategories.value.length > 0) {
+                    result = result.filter(g => 
+                        g.categories.some(c => selectedCategories.value.includes(c))
+                    );
+                }
+
+                // C. 遊玩人數 (範圍判定)
+                if (selectedPlayers.value.length > 0) {
+                    result = result.filter(g => {
+                        return selectedPlayers.value.some(sel => {
+                            if (sel === "10+") return g.playerMax >= 10;
+                            const num = parseInt(sel);
+                            // 只要選擇的人數落在 [min, max] 區間內就算符合
+                            return num >= g.playerMin && num <= g.playerMax;
+                        });
+                    });
+                }
+
+                // D. 遊玩時間 (使用自動歸類後的 Bucket 進行聯集篩選)
+                if (selectedTimes.value.length > 0) {
+                    result = result.filter(g => selectedTimes.value.includes(g.timeBucket));
+                }
+
+                // E. 排序：推薦優先 -> 新到舊
+                return result.sort((a, b) => {
+                    // 先比推薦 (true = 1, false = 0)
+                    if (a.isRecommended !== b.isRecommended) {
+                        return a.isRecommended ? -1 : 1;
+                    }
+                    // 再比時間 (新 -> 舊)
+                    return b.timestamp - a.timestamp;
+                });
+            });
+
+            return {
+                loading,
+                searchKeyword,
+                allCategories,
+                playerOptions,
+                timeOptions,
+                selectedCategories,
+                selectedPlayers,
+                selectedTimes,
+                filteredGames
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
