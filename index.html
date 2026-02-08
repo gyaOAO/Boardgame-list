@@ -9,10 +9,9 @@
     <style>
         :root {
             --primary-color: #5d5d5d;
-            --accent-color: #d93025; /* 推薦標籤紅 */
+            --accent-color: #d93025;
             --bg-color: #f8f9fa;
         }
-
         body {
             font-family: "Microsoft JhengHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
             margin: 0;
@@ -20,8 +19,6 @@
             background-color: var(--bg-color);
             color: #333;
         }
-
-        /* --- 篩選區塊樣式 --- */
         .filter-container {
             background: white;
             padding: 20px;
@@ -31,7 +28,6 @@
             top: 0;
             z-index: 100;
         }
-
         .search-box {
             width: 100%;
             padding: 10px;
@@ -41,7 +37,6 @@
             margin-bottom: 15px;
             box-sizing: border-box;
         }
-
         .filter-row {
             display: flex;
             align-items: flex-start;
@@ -50,21 +45,18 @@
             padding-bottom: 10px;
             flex-wrap: wrap;
         }
-
         .filter-label {
             width: 80px;
             font-weight: bold;
             flex-shrink: 0;
             padding-top: 5px;
         }
-
         .filter-options {
             flex-grow: 1;
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
         }
-
         .checkbox-label {
             display: flex;
             align-items: center;
@@ -77,22 +69,17 @@
             transition: 0.2s;
             user-select: none;
         }
-
         .checkbox-label:hover {
             background-color: #f0f0f0;
         }
-
         .checkbox-label input {
             margin-right: 6px;
         }
-
         .checkbox-label.active {
             background-color: #e8f0fe;
             border-color: #1a73e8;
             color: #1a73e8;
         }
-
-        /* --- 桌遊列表樣式 --- */
         .game-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -101,7 +88,6 @@
             max-width: 1200px;
             margin: 0 auto;
         }
-
         .game-card {
             background: white;
             border-radius: 8px;
@@ -111,13 +97,10 @@
             position: relative;
             border: 1px solid #eee;
         }
-
         .game-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.15);
         }
-
-        /* 圖片 4:3 比例限制 */
         .image-container {
             width: 100%;
             aspect-ratio: 4 / 3;
@@ -125,14 +108,11 @@
             overflow: hidden;
             position: relative;
         }
-
         .image-container img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-
-        /* 推薦標籤 */
         .badge-recommend {
             position: absolute;
             top: 10px;
@@ -146,18 +126,15 @@
             box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
             z-index: 10;
         }
-
         .card-content {
             padding: 15px;
         }
-
         .game-title {
             font-size: 18px;
             font-weight: bold;
             margin: 0 0 10px 0;
             color: #222;
         }
-
         .game-info {
             font-size: 13px;
             color: #666;
@@ -167,14 +144,12 @@
             gap: 5px;
             align-items: center;
         }
-
         .tag {
             background: #eee;
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 12px;
         }
-
         .game-desc {
             margin-top: 10px;
             font-size: 14px;
@@ -184,14 +159,12 @@
             padding-top: 8px;
             white-space: pre-wrap;
         }
-
         .loading {
             text-align: center;
             padding: 50px;
             font-size: 20px;
             color: #888;
         }
-
         @media (max-width: 600px) {
             .game-grid { grid-template-columns: 1fr; }
             .filter-label { width: 100%; margin-bottom: 5px; }
@@ -281,6 +254,15 @@
             const playerOptions = ["2", "3", "4", "5", "6", "7", "8", "9", "10+"];
             const timeOptions = ["15min", "30min", "45min", "60min", "1hr+"];
 
+            // 定義各個時間按鈕的「分鐘數範圍」
+            const timeButtonRanges = {
+                "15min": [0, 15],
+                "30min": [16, 30],
+                "45min": [31, 45],
+                "60min": [46, 60],
+                "1hr+":  [61, 9999]
+            };
+
             onMounted(() => {
                 Papa.parse(SHEET_CSV_URL, {
                     download: true,
@@ -292,6 +274,7 @@
                             .map((row, index) => {
                                 const cats = row.Category ? row.Category.split(/[,，、]/).map(c => c.trim()) : [];
                                 
+                                // 人數範圍處理
                                 let minP = 1, maxP = 99;
                                 if(row.Players) {
                                     const parts = row.Players.match(/(\d+)/g);
@@ -301,23 +284,35 @@
                                     }
                                 }
 
-                                let timeBucket = ""; 
-                                const timeNumMatch = row.Time ? row.Time.match(/(\d+)/) : null;
-                                if (timeNumMatch) {
-                                    const minutes = parseInt(timeNumMatch[0]);
-                                    if (minutes <= 15) timeBucket = "15min";
-                                    else if (minutes <= 30) timeBucket = "30min";
-                                    else if (minutes <= 45) timeBucket = "45min";
-                                    else if (minutes <= 60) timeBucket = "60min";
-                                    else timeBucket = "1hr+";
+                                // 🔥🔥🔥 時間範圍處理 (新功能) 🔥🔥🔥
+                                let myTimeBuckets = []; // 這款桌遊屬於哪些時間分類
+                                let tMin = 0, tMax = 0;
+                                const timeParts = row.Time ? row.Time.match(/(\d+)/g) : [];
+                                
+                                if (timeParts.length > 0) {
+                                    tMin = parseInt(timeParts[0]);
+                                    // 如果只有寫一個數字 "30"，則 min=30, max=30
+                                    // 如果寫 "45-75"，則 min=45, max=75
+                                    tMax = timeParts.length > 1 ? parseInt(timeParts[1]) : tMin;
+
+                                    // 檢查這款遊戲的時間範圍是否與按鈕的範圍有重疊
+                                    // 重疊公式：max(A_start, B_start) <= min(A_end, B_end)
+                                    for (const [btnName, range] of Object.entries(timeButtonRanges)) {
+                                        const btnMin = range[0];
+                                        const btnMax = range[1];
+                                        
+                                        // 判斷重疊
+                                        if (Math.max(tMin, btnMin) <= Math.min(tMax, btnMax)) {
+                                            myTimeBuckets.push(btnName);
+                                        }
+                                    }
                                 }
 
-                                // 🔥 修改重點：將 Timestamp 欄位強制解析為數字序號
                                 const sequenceNum = parseInt(row.Timestamp) || 0;
 
                                 return {
                                     id: index,
-                                    sequence: sequenceNum, // 儲存序號
+                                    sequence: sequenceNum,
                                     title: row.Title,
                                     image: row.Image,
                                     categories: cats,
@@ -325,7 +320,7 @@
                                     playerMin: minP,
                                     playerMax: maxP,
                                     timeText: row.Time,
-                                    timeBucket: timeBucket,
+                                    timeBuckets: myTimeBuckets, // 這裡存的是一個陣列，例如 ["45min", "60min", "1hr+"]
                                     desc: row.Desc,
                                     isRecommended: (row.Recommend && (row.Recommend === 'TRUE' || row.Recommend.includes('是')))
                                 };
@@ -368,16 +363,17 @@
                     });
                 }
 
+                // 🔥 修正後的篩選邏輯：檢查遊戲的 timeBuckets 是否包含使用者選的任意一個
                 if (selectedTimes.value.length > 0) {
-                    result = result.filter(g => selectedTimes.value.includes(g.timeBucket));
+                    result = result.filter(g => 
+                        g.timeBuckets.some(tb => selectedTimes.value.includes(tb))
+                    );
                 }
 
                 return result.sort((a, b) => {
-                    // 1. 推薦優先
                     if (a.isRecommended !== b.isRecommended) {
                         return a.isRecommended ? -1 : 1;
                     }
-                    // 2. 序號大排到小 (降冪：b - a)
                     return b.sequence - a.sequence;
                 });
             });
