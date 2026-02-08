@@ -86,7 +86,6 @@
             margin-right: 6px;
         }
 
-        /* 選中時的樣式 */
         .checkbox-label.active {
             background-color: #e8f0fe;
             border-color: #1a73e8;
@@ -130,14 +129,14 @@
         .image-container img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* 超出部分裁切，保持填滿 */
+            object-fit: cover;
         }
 
-        /* 推薦標籤 (紅底白字) */
+        /* 推薦標籤 */
         .badge-recommend {
             position: absolute;
             top: 10px;
-            left: -5px; /* 稍微突出 */
+            left: -5px;
             background-color: var(--accent-color);
             color: white;
             padding: 5px 10px;
@@ -183,10 +182,9 @@
             line-height: 1.4;
             border-top: 1px solid #eee;
             padding-top: 8px;
-            white-space: pre-wrap; /* 保留換行 */
+            white-space: pre-wrap;
         }
 
-        /* 載入中 */
         .loading {
             text-align: center;
             padding: 50px;
@@ -194,18 +192,10 @@
             color: #888;
         }
 
-        /* RWD 調整 */
         @media (max-width: 600px) {
-            .game-grid {
-                grid-template-columns: 1fr; /* 手機版單欄 */
-            }
-            .filter-label {
-                width: 100%;
-                margin-bottom: 5px;
-            }
-            .filter-row {
-                flex-direction: column;
-            }
+            .game-grid { grid-template-columns: 1fr; }
+            .filter-label { width: 100%; margin-bottom: 5px; }
+            .filter-row { flex-direction: column; }
         }
     </style>
 </head>
@@ -251,25 +241,19 @@
     
     <div v-else class="game-grid">
         <div v-for="game in filteredGames" :key="game.id" class="game-card">
-            
             <div v-if="game.isRecommended" class="badge-recommend">推薦</div>
-
             <div class="image-container">
                 <img :src="game.image" :alt="game.title" loading="lazy" onerror="this.src='https://via.placeholder.com/400x300?text=No+Image'">
             </div>
-
             <div class="card-content">
                 <h3 class="game-title">{{ game.title }}</h3>
-                
                 <div class="game-info">
                     <span v-for="c in game.categories" class="tag">#{{ c }}</span>
                 </div>
-                
                 <div class="game-info" style="margin-top:8px;">
                     <span>👥 {{ game.playerText }}</span>
                     <span style="margin-left: 10px;">⏰ {{ game.timeText }}</span>
                 </div>
-
                 <div class="game-desc" v-if="game.desc">
                     {{ game.desc }}
                 </div>
@@ -280,7 +264,7 @@
 
 <script>
     // ▼▼▼ 請將此處的網址換成你的 Google Sheet 發布 CSV 網址 ▼▼▼
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjfiKKhRKlV0dB-C2YVI7_hyt_BmQ6BvC4dh_hEqGbbctMVPn7uUaeaJU92QUftxY8dnK5mwqhUri_/pub?output=csv'; 
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRjfiKKhRKlV0dB-C2YVI7_hyt_BmQ6BvC4dh_hEqGbbctMVPn7uUaeaJU92QUftxY8dnK5mwqhUri_/pubhtml'; 
     // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     const { createApp, computed, ref, onMounted } = Vue;
@@ -290,43 +274,33 @@
             const games = ref([]);
             const loading = ref(true);
             const searchKeyword = ref("");
-            
-            // 篩選狀態
             const selectedCategories = ref([]);
             const selectedPlayers = ref([]);
             const selectedTimes = ref([]);
 
-            // 固定選項 (依照你的需求設定)
             const playerOptions = ["2", "3", "4", "5", "6", "7", "8", "9", "10+"];
             const timeOptions = ["15min", "30min", "45min", "60min", "1hr+"];
 
-            // 1. 抓取資料
             onMounted(() => {
                 Papa.parse(SHEET_CSV_URL, {
                     download: true,
                     header: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        // 整理資料格式
                         games.value = results.data
-                            .filter(row => row.Title) // 過濾標題為空的行
+                            .filter(row => row.Title)
                             .map((row, index) => {
-                                // A. 處理分類 (支援逗號與頓號)
                                 const cats = row.Category ? row.Category.split(/[,，、]/).map(c => c.trim()) : [];
                                 
-                                // B. 處理人數 (解析 "2-4" -> min:2, max:4)
                                 let minP = 1, maxP = 99;
                                 if(row.Players) {
                                     const parts = row.Players.match(/(\d+)/g);
                                     if(parts) {
                                         minP = parseInt(parts[0]);
-                                        // 如果只有一個數字(如"4人")，則 min=4, max=4
-                                        // 如果是範圍(如"2-4")，則 min=2, max=4
                                         maxP = parts.length > 1 ? parseInt(parts[1]) : minP;
                                     }
                                 }
 
-                                // C. 處理時間 (自動歸類邏輯)
                                 let timeBucket = ""; 
                                 const timeNumMatch = row.Time ? row.Time.match(/(\d+)/) : null;
                                 if (timeNumMatch) {
@@ -338,18 +312,20 @@
                                     else timeBucket = "1hr+";
                                 }
 
+                                // 🔥 修改重點：將 Timestamp 欄位強制解析為數字序號
+                                const sequenceNum = parseInt(row.Timestamp) || 0;
+
                                 return {
                                     id: index,
-                                    // 處理時間戳記 (若無則預設為舊時間 1970年)
-                                    timestamp: row.Timestamp ? new Date(row.Timestamp) : new Date(0), 
+                                    sequence: sequenceNum, // 儲存序號
                                     title: row.Title,
                                     image: row.Image,
                                     categories: cats,
-                                    playerText: row.Players, // 顯示用原文
-                                    playerMin: minP,         // 運算用最小值
-                                    playerMax: maxP,         // 運算用最大值
-                                    timeText: row.Time,      // 顯示用原文 (如 "20min")
-                                    timeBucket: timeBucket,  // 篩選用標籤 (如 "30min")
+                                    playerText: row.Players,
+                                    playerMin: minP,
+                                    playerMax: maxP,
+                                    timeText: row.Time,
+                                    timeBucket: timeBucket,
                                     desc: row.Desc,
                                     isRecommended: (row.Recommend && (row.Recommend === 'TRUE' || row.Recommend.includes('是')))
                                 };
@@ -359,18 +335,15 @@
                 });
             });
 
-            // 2. 計算所有動態分類 (只顯示目前資料庫有的)
             const allCategories = computed(() => {
                 const s = new Set();
                 games.value.forEach(g => g.categories.forEach(c => s.add(c)));
                 return Array.from(s).sort();
             });
 
-            // 3. 核心篩選邏輯
             const filteredGames = computed(() => {
                 let result = games.value;
 
-                // A. 關鍵字搜尋
                 if (searchKeyword.value) {
                     const k = searchKeyword.value.toLowerCase();
                     result = result.filter(g => 
@@ -379,38 +352,33 @@
                     );
                 }
 
-                // B. 遊戲分類 (聯集 OR)
                 if (selectedCategories.value.length > 0) {
                     result = result.filter(g => 
                         g.categories.some(c => selectedCategories.value.includes(c))
                     );
                 }
 
-                // C. 遊玩人數 (範圍判定)
                 if (selectedPlayers.value.length > 0) {
                     result = result.filter(g => {
                         return selectedPlayers.value.some(sel => {
                             if (sel === "10+") return g.playerMax >= 10;
                             const num = parseInt(sel);
-                            // 只要選擇的人數落在 [min, max] 區間內就算符合
                             return num >= g.playerMin && num <= g.playerMax;
                         });
                     });
                 }
 
-                // D. 遊玩時間 (使用自動歸類後的 Bucket 進行聯集篩選)
                 if (selectedTimes.value.length > 0) {
                     result = result.filter(g => selectedTimes.value.includes(g.timeBucket));
                 }
 
-                // E. 排序：推薦優先 -> 新到舊
                 return result.sort((a, b) => {
-                    // 先比推薦 (true = 1, false = 0)
+                    // 1. 推薦優先
                     if (a.isRecommended !== b.isRecommended) {
                         return a.isRecommended ? -1 : 1;
                     }
-                    // 再比時間 (新 -> 舊)
-                    return b.timestamp - a.timestamp;
+                    // 2. 序號大排到小 (降冪：b - a)
+                    return b.sequence - a.sequence;
                 });
             });
 
