@@ -20,10 +20,10 @@
             color: #333;
         }
         
-        /* --- 篩選區塊樣式 (大改版) --- */
+        /* --- 篩選區塊樣式 --- */
         .filter-container {
             background: white;
-            padding: 15px;
+            padding: 15px 20px; /* 稍微增加左右內距 */
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             margin-bottom: 20px;
             position: sticky;
@@ -31,26 +31,35 @@
             z-index: 100;
         }
 
-        /* 上方搜尋列與按鈕的容器 */
         .filter-header {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             align-items: center;
             justify-content: space-between;
         }
 
         .search-box {
-            flex-grow: 1; /* 佔滿剩餘空間 */
+            flex-grow: 1; 
             padding: 10px;
             font-size: 16px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            /* 移除原本的 margin-bottom，改由 header 控制 */
             margin: 0; 
             box-sizing: border-box;
+            min-width: 0; /* 防止在小螢幕被撐開 */
         }
 
-        /* 篩選切換按鈕 */
+        /* 🔥 新增：常駐顯示的數量標籤 */
+        .count-badge {
+            font-size: 14px;
+            color: #666;
+            white-space: nowrap; /* 不換行 */
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 20px;
+            border: 1px solid #eee;
+        }
+
         .toggle-btn {
             padding: 10px 15px;
             background-color: #f1f3f4;
@@ -58,7 +67,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
-            white-space: nowrap; /* 不換行 */
+            white-space: nowrap;
             font-weight: bold;
             color: #555;
             transition: 0.2s;
@@ -72,7 +81,6 @@
             border-color: var(--primary-color);
         }
 
-        /* 可收合的篩選選項區 */
         .filter-body {
             margin-top: 15px;
             border-top: 1px solid #eee;
@@ -99,7 +107,7 @@
             flex-grow: 1;
             display: flex;
             flex-wrap: wrap;
-            gap: 8px; /*稍微縮小間距讓手機好排*/
+            gap: 8px;
         }
         
         .checkbox-label {
@@ -126,14 +134,14 @@
             color: #1a73e8;
         }
 
-        /* --- 桌遊列表樣式 (Grid 調整) --- */
+        /* --- 桌遊列表樣式 --- */
         .game-grid {
             display: grid;
-            /* 🔥 電腦版：改為 minmax 170px，在 1200px 寬度下大約能塞 6 個 */
             grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-            gap: 15px; /*稍微縮小間距*/
-            padding: 15px;
-            max-width: 1200px;
+            gap: 15px;
+            padding: 0 20px 20px 20px; /* 上方 padding 歸零，左右增加 */
+            /* 🔥 修改重點：寬度改為 95%，讓兩側留白變少 */
+            max-width: 95%; 
             margin: 0 auto;
         }
 
@@ -184,10 +192,10 @@
             z-index: 10;
         }
         .card-content {
-            padding: 10px; /*稍微縮小內距*/
+            padding: 12px; /* 稍微增加一點內距讓文字呼吸 */
         }
         .game-title {
-            font-size: 16px; /*稍微縮小字體*/
+            font-size: 16px;
             font-weight: bold;
             margin: 0 0 8px 0;
             color: #222;
@@ -227,10 +235,24 @@
         /* --- RWD 手機版調整 --- */
         @media (max-width: 600px) {
             .game-grid {
-                /* 🔥 手機版：強制一排 2 個 (1fr 1fr) */
                 grid-template-columns: repeat(2, 1fr);
                 gap: 10px;
                 padding: 10px;
+                max-width: 100%; /* 手機版全寬 */
+            }
+            .filter-container {
+                padding: 10px; /* 手機版篩選區緊湊一點 */
+            }
+            .filter-header {
+                gap: 8px; /* 手機版間距縮小 */
+            }
+            .count-badge {
+                padding: 5px 8px;
+                font-size: 12px;
+            }
+            .toggle-btn {
+                padding: 8px 10px;
+                font-size: 13px;
             }
             .filter-label {
                 width: 100%;
@@ -239,9 +261,8 @@
             .filter-row {
                 flex-direction: column;
             }
-            /* 手機版字體稍微調小以適應兩欄 */
             .game-title { font-size: 15px; }
-            .game-desc { display: none; } /* 手機版如果覺得太擠，可以選擇隱藏備註，若要顯示請刪除此行 */
+            .game-desc { display: none; } 
         }
     </style>
 </head>
@@ -251,8 +272,13 @@
     <div class="filter-container">
         <div class="filter-header">
             <input type="text" v-model="searchKeyword" class="search-box" placeholder="搜尋桌遊...">
+            
+            <div class="count-badge">
+                共 {{ filteredGames.length }} 款
+            </div>
+
             <button class="toggle-btn" :class="{ active: isFilterExpanded }" @click="toggleFilter">
-                {{ isFilterExpanded ? '收合 ▲' : '篩選條件 ▼' }}
+                {{ isFilterExpanded ? '收合 ▲' : '篩選 ▼' }}
             </button>
         </div>
         
@@ -282,10 +308,6 @@
                         <input type="checkbox" :value="time" v-model="selectedTimes"> {{ time }}
                     </label>
                 </div>
-            </div>
-            
-            <div style="font-size: 12px; color: #888; text-align: right; margin-top: 10px;">
-                顯示 {{ filteredGames.length }} 款桌遊
             </div>
         </div>
     </div>
@@ -337,7 +359,6 @@
             const selectedPlayers = ref([]);
             const selectedTimes = ref([]);
             
-            // 🔥 新增：控制篩選區展開/收合的變數
             const isFilterExpanded = ref(false); 
 
             const playerOptions = ["2", "3", "4", "5", "6", "7", "8", "9", "10+"];
@@ -351,7 +372,6 @@
                 "1hr+":  [61, 9999]
             };
 
-            // 🔥 新增：切換篩選區顯示的函式
             const toggleFilter = () => {
                 isFilterExpanded.value = !isFilterExpanded.value;
             };
@@ -470,8 +490,8 @@
                 selectedPlayers,
                 selectedTimes,
                 filteredGames,
-                isFilterExpanded, // 匯出變數供 HTML 使用
-                toggleFilter      // 匯出函式供 HTML 使用
+                isFilterExpanded,
+                toggleFilter
             };
         }
     }).mount('#app');
